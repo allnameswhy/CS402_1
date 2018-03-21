@@ -1,0 +1,10 @@
+CS402, Coursework 1
+
+1. Conjunctive Normal Form
+Write a program that takes a single propositional formula in Polish Notation as input, and prints out the following three results:
+	1) CNF in Polish Notation
+	2) CNF in infix notation
+	3) The decision on the validity of the formula
+
+2. Nonogram as SAT
+Write a MiniSAT-based solver for Nonogram.
