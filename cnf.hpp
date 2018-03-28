@@ -14,6 +14,7 @@ class Node {
         Node* parent;
         vector<Node*> children;
         int children_num;
+        int secret_children_num;
         string value;
     public:
         Node(string);
@@ -23,13 +24,15 @@ class Node {
         vector<Node*> get_siblings();
         string get_value();
         void add_child(Node *);
+        int set_secret_children_num();
+        int construct_tree(int);
 };
 
 class ExpressionTree {
     private:
         Node *root;
     public:
-        ExpressionTree(string);
+        ExpressionTree();
 };
 
 #endif CS402_1_CNF_HPP
