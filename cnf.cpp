@@ -8,7 +8,7 @@
 using namespace std;
 
 static vector<string> ops = {"&", "|", "<", ">", "="};       /* list of operations */
-static string param = ">&-pq&p>rq";                         /* contains command args */
+static string param = "-&&&p----q&r&s-s&tg";                         /* contains command args */
 
 static bool is_ops(string cand) {                            /* is some character operator */
     vector<string>::iterator result = find(ops.begin(), ops.end(), cand);
@@ -28,6 +28,10 @@ vector<Node*> Node::get_children() {
     return children;
 }
 
+int Node::get_children_num() {
+    return children_num;
+}
+
 Node* Node::get_ith_child(int i) {
     return children[i];
 }
@@ -44,6 +48,10 @@ string Node::get_value() {
     return value;
 }
 
+void Node::set_value(string new_value) {
+    value = new_value;
+}
+
 void Node::add_child(Node *child) {
     children.push_back(child);
     child->parent = this;
@@ -51,10 +59,9 @@ void Node::add_child(Node *child) {
 }
 
 int Node::set_secret_children_num() {
-    if (secret_children_num < 2)
-        return ++secret_children_num;
-    else
-        return secret_children_num;
+    int maximum_secret_children = this->get_value() == "-" ? 1 : 2;
+    if (secret_children_num < maximum_secret_children) ++secret_children_num;
+    return secret_children_num < maximum_secret_children;
 }
 
 /* Constructor for class ExpressionTree
@@ -74,11 +81,11 @@ int Node::construct_tree(int i) {
         return --i;
     }
 
-    if  (is_ops(param.substr(i, 1))) {
+    if (is_ops(param.substr(i, 1))) {
         if ((this->get_value() == "&" || this->get_value() == "|") && (!param.compare(i, 1, this->get_value()))) {
             int first_child_of_child = this->construct_tree(i + 1);
             int second_child_of_child = this->construct_tree(first_child_of_child + 1);
-            if (this->set_secret_children_num() < 2)
+            if (this->set_secret_children_num())
                 return this->construct_tree(second_child_of_child + 1);
             else
                 return second_child_of_child;
@@ -86,7 +93,7 @@ int Node::construct_tree(int i) {
             Node *new_node = new Node(param.substr(i, 1));
             this->add_child(new_node);
             int child = new_node->construct_tree(i + 1);
-            if (this->set_secret_children_num() < 2)
+            if (this->set_secret_children_num())
                 return this->construct_tree(child + 1);
             else
                 return child;
@@ -97,24 +104,76 @@ int Node::construct_tree(int i) {
             int how_many_neg = 0;
             while (param[i+how_many_neg] == '-')
                 how_many_neg++;
-            int next_index = (how_many_neg%2) + 1;
-            Node *new_node = new Node(param.substr(i, next_index));
-            this->add_child(new_node);
-            next_index += i;
-            if (this->set_secret_children_num() < 2)
-                return this->construct_tree(next_index);
-            else
-                return next_index;
+            Node *new_node = NULL;
+            Node *new_new_node = NULL;
+            if (is_ops(param.substr(i+how_many_neg, 1))) {
+                if (!this->get_value().compare("-")) {
+                    if (how_many_neg % 2) {
+                        this->set_value(param.substr(i+how_many_neg, 1));
+                        return this->construct_tree(i+how_many_neg+1);
+                    }
+                    else {
+                        new_node = new Node(param.substr(i+how_many_neg, 1));
+                        this->add_child(new_node);
+                        this->set_secret_children_num();
+                        return new_node->construct_tree(i+how_many_neg+1);
+                    }
+                }
+                else {
+                    if (how_many_neg % 2) {
+                        new_node = new Node("-");
+                        this->add_child(new_node);
+                        new_new_node = new Node(param.substr(i+how_many_neg, 1));
+                        new_node->add_child(new_new_node);
+                        new_node->set_secret_children_num();
+                        int child_of_child = new_node->construct_tree(i+how_many_neg+1);
+                        if (this->set_secret_children_num())
+                            return this->construct_tree(child_of_child+1);
+                        return child_of_child;
+                    }
+                    else {
+                        new_node = new Node(param.substr(i+how_many_neg, 1));
+                        this->add_child(new_node);
+                        int child_of_child = new_node->construct_tree(i+how_many_neg+1);
+                        if (this->set_secret_children_num())
+                            return this->construct_tree(child_of_child+1);
+                        return child_of_child;
+                    }
+                }
+            }
+            else {
+                if (!this->get_value().compare("-")) {
+                    if (how_many_neg % 2)
+                        this->set_value(param.substr(i+how_many_neg, 1));
+                    else
+                        this->set_value("-" + param.substr(i+how_many_neg, 1));
+                    return i+how_many_neg;
+                }
+                else {
+                    if (how_many_neg % 2)
+                        new_node = new Node("-" + param.substr(i+how_many_neg, 1));
+                    else
+                        new_node = new Node(param.substr(i+how_many_neg, 1));
+                    this->add_child(new_node);
+                    if (this->set_secret_children_num())
+                        return this->construct_tree(i+how_many_neg+1);
+                    return i+how_many_neg;
+                }
+            }
         }
         else {
             Node *new_node = new Node(param.substr(i, 1));
             this->add_child(new_node);
-            if (this->set_secret_children_num() < 2)
+            if (this->set_secret_children_num())
                 return this->construct_tree(i+1);
             else
                 return i;
         }
     }
+}
+
+Node *ExpressionTree::get_root() {
+    return root;
 }
 
 
@@ -126,5 +185,13 @@ int main() {
 //    cout << my_node->get_children()[0]->get_value();
 
     ExpressionTree *new_tree = new ExpressionTree();
+    Node *root = new_tree->get_root();
+    Node *second = root->get_ith_child(0);
+    Node *third = second->get_ith_child(3);
+//    for (int i = 0; i < new_tree->get_root()->get_children_num(); i++) {
+//        cout << new_tree->get_root()->get_children()[i]->get_value() << endl;
+//    }
+    cout << root->get_value() << second->get_value() << third->get_value() << endl;
+//    cout << new_tree->get_root()->get_value() << endl;
     return 0;
 }
