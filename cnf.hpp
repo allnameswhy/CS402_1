@@ -38,4 +38,4 @@ class ExpressionTree {
         Node *get_root();
 };
 
-#endif CS402_1_CNF_HPP
+#endif
