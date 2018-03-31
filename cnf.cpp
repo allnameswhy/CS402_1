@@ -11,8 +11,7 @@
 using namespace std;
 
 static vector<string> ops = {"&", "|", "<", ">", "="};       /* list of operations */
-static vector<string> param = {};
-//static string param = "-&&&p----q&r&s-s&tg";                         /* contains command args */
+static vector<string> param = {}; /* contains command args */
 
 static bool is_ops(const string cand) {                            /* is some character operator */
     vector<string>::iterator result = find(ops.begin(), ops.end(), cand);
@@ -36,6 +35,7 @@ static vector<string> split(const string s, char delim) {
 /* Construction & utility functions for class Node */
 Node::Node(string _value) {
     parent = NULL;
+    index = -1;
     children_num = 0;
     secret_children_num = 0;
     value = _value;
@@ -65,6 +65,10 @@ string Node::get_value() {
     return value;
 }
 
+int Node::get_index() {
+    return index;
+}
+
 void Node::set_value(string new_value) {
     value = new_value;
 }
@@ -72,11 +76,31 @@ void Node::set_value(string new_value) {
 void Node::add_child(Node *child) {
     children.push_back(child);
     child->parent = this;
+    child->index = children_num;
     children_num++;
 }
 
+Node *Node::replace_child(int i, Node *new_child) {
+    Node *prev_child = this->get_ith_child(i);
+    this->get_children()[i] = new_child;
+    return prev_child;
+}
+
+void Node::negate() {
+    Node *parent = this->get_parent();
+    if (!this->get_value().compare("-")) {
+        Node *child = this->get_ith_child(0);
+        free(parent->replace_child(this->get_index(). child));
+    }
+    else {
+        Node *intermediate = new Node("-");
+        intermediate->add_child(this);
+        parent->replace_child(this->get_index(), intermediate);
+    }
+}
+
 int Node::set_secret_children_num() {
-    int maximum_secret_children = this->get_value() == "-" ? 1 : 2;
+    int maximum_secret_children = this->get_value().compare("-") ? 2 : 1;
     if (secret_children_num < maximum_secret_children) ++secret_children_num;
     return secret_children_num < maximum_secret_children;
 }
@@ -162,13 +186,18 @@ int Node::construct_tree(int i) {
                 if (!this->get_value().compare("-")) {
                     if (how_many_neg % 2)
                         this->set_value(param[i+how_many_neg]);
-                    else
-                        this->set_value("-" + param[i+how_many_neg]);
+                    else {
+                        new_node = new Node(param[i+how_many_neg]);
+                        this->add_child(new_node);
+                    };
                     return i+how_many_neg;
                 }
                 else {
-                    if (how_many_neg % 2)
-                        new_node = new Node("-" + param[i+how_many_neg]);
+                    if (how_many_neg % 2) {
+                        new_node = new Node("-");
+                        this->add_child(new_node);
+                        new_node = new Node(param[i+how_many_neg]);
+                    }
                     else
                         new_node = new Node(param[i+how_many_neg]);
                     this->add_child(new_node);
@@ -191,6 +220,56 @@ int Node::construct_tree(int i) {
 
 Node *ExpressionTree::get_root() {
     return root;
+}
+
+static Node *impl_free(Node *cur) {
+    if (!cur) return;
+
+    if (!cur->get_value().compare(">")) {
+        cur->set_value("|");
+        Node *first_child = impl_free(cur->get_ith_child(0));
+        Node *second_child = impl_free(cur->get_ith_child(1));
+
+        cur->replace_child(0, first_child);
+        cur->get_ith_child(0)->negate();
+        cur->replace_child(1, second_child);
+    }
+    else if (!cur->get_value().compare("<")) {
+        cur->set_value("|");
+        Node *first_child = impl_free(cur->get_ith_child(0));
+        Node *second_child = impl_free(cur->get_ith_child(1));
+
+        cur->replace_child(0, first_child);
+        cur->replace_child(1, second_child);
+        cur->get_ith_child(1)->negate();
+    }
+    else if (!cur->get_value().compare("=")) {
+        Node *first_child = impl_free(cur->get_ith_child(0));
+        Node *second_child = impl_free(cur->get_ith_child(1));
+        Node *first_child_new = new Node("|");
+        Node *second_child_new = new Node("|");
+
+        cur->set_value("&");
+        cur->replace_child(0, first_child_new);
+        cur->replace_child(1, second_child_new);
+
+        first_child_new->add_child(first_child);
+        first_child_new->get_ith_child(0)->negate();
+        first_child_new->add_child(second_child);
+
+        second_child_new->add_child(first_child);
+        second_child_new->add_child(second_child);
+        second_child_new->get_ith_child(1)->negate();
+    }
+    else {
+        Node *child;
+        for (int i = 0; i < cur->get_children_num(); i++) {
+            child = impl_free(cur->get_ith_child(i));
+            cur->replace_child(i,child);
+        }
+    }
+
+    return cur;
 }
 
 int main(int argc, char** argv) {

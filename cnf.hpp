@@ -13,6 +13,7 @@ class Node {
     private:
         Node* parent;
         vector<Node*> children;
+        int index;
         int children_num;
         int secret_children_num;
         string value;
@@ -24,8 +25,11 @@ class Node {
         Node* get_parent();
         vector<Node*> get_siblings();
         string get_value();
+        int get_index();
         void set_value(string);
         void add_child(Node *);
+        Node *replace_child(int, Node *);
+        void negate();
         int set_secret_children_num();
         int construct_tree(int);
 };
