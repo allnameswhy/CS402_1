@@ -29,7 +29,7 @@ class Node {
         void set_value(string);
         void add_child(Node *);
         Node *replace_child(int, Node *);
-        void negate();
+        Node *negate();
         int set_secret_children_num();
         int construct_tree(int);
 };
@@ -42,4 +42,9 @@ class ExpressionTree {
         Node *get_root();
 };
 
+Node *impl_free(Node *);
+Node *nnf(Node *);
+Node *distr(Node *, Node *);
+Node *cnf(Node *);
+Node *cnf_and_distr(vector<Node*>);
 #endif

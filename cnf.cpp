@@ -83,19 +83,23 @@ void Node::add_child(Node *child) {
 Node *Node::replace_child(int i, Node *new_child) {
     Node *prev_child = this->get_ith_child(i);
     this->get_children()[i] = new_child;
+    new_child->parent = this;
+    new_child->index = i;
     return prev_child;
 }
 
-void Node::negate() {
+Node *Node::negate() {
     Node *parent = this->get_parent();
     if (!this->get_value().compare("-")) {
         Node *child = this->get_ith_child(0);
-        free(parent->replace_child(this->get_index(). child));
+        free(parent->replace_child(this->get_index(), child));
+        return child;
     }
     else {
         Node *intermediate = new Node("-");
         intermediate->add_child(this);
         parent->replace_child(this->get_index(), intermediate);
+        return intermediate;
     }
 }
 
@@ -196,13 +200,15 @@ int Node::construct_tree(int i) {
                     if (how_many_neg % 2) {
                         new_node = new Node("-");
                         this->add_child(new_node);
-                        new_node = new Node(param[i+how_many_neg]);
+                        new_new_node = new Node(param[i+how_many_neg]);
+                        new_node->add_child(new_new_node);
                     }
-                    else
-                        new_node = new Node(param[i+how_many_neg]);
-                    this->add_child(new_node);
-                    if (this->set_secret_children_num())
-                        return this->construct_tree(i+how_many_neg+1);
+                    else {
+                        new_node = new Node(param[i + how_many_neg]);
+                        this->add_child(new_node);
+                        if (this->set_secret_children_num())
+                            return this->construct_tree(i + how_many_neg + 1);
+                    }
                     return i+how_many_neg;
                 }
             }
@@ -222,8 +228,8 @@ Node *ExpressionTree::get_root() {
     return root;
 }
 
-static Node *impl_free(Node *cur) {
-    if (!cur) return;
+Node *impl_free(Node *cur) {
+    if (!cur) return cur;
 
     if (!cur->get_value().compare(">")) {
         cur->set_value("|");
@@ -268,8 +274,95 @@ static Node *impl_free(Node *cur) {
             cur->replace_child(i,child);
         }
     }
-
     return cur;
+}
+
+Node *nnf(Node *cur) {
+    if (!cur) return cur;
+
+    if (!cur->get_value().compare("-")) {
+        if (!cur->get_ith_child(0)->get_value().compare("-")) {
+            Node *new_child = nnf(cur->get_ith_child(0)->get_ith_child(0));
+            free(cur->get_parent()->replace_child(cur->get_index(), new_child));
+            return new_child;
+        }
+        else if (!cur->get_ith_child(0)->get_value().compare("&")) {
+            Node *new_child = new Node("|");
+            for (int i = 0; i < cur->get_ith_child(0)->get_children_num(); i++)
+                new_child->add_child(cur->get_ith_child(0)->get_ith_child(i)->negate());
+            free(cur->get_parent()->replace_child(cur->get_index(), new_child));
+            return nnf(new_child);
+        }
+        else if (!cur->get_ith_child(0)->get_value().compare("|")) {
+            Node *new_child = new Node("&");
+            for (int i = 0; i < cur->get_ith_child(0)->get_children_num(); i++)
+                new_child->add_child(cur->get_ith_child(0)->get_ith_child(i)->negate());
+            free(cur->get_parent()->replace_child(cur->get_index(), new_child));
+            return nnf(new_child);
+        }
+    }
+    else if (is_ops(cur->get_value())) {
+        Node *new_child;
+        for (int i = 0; i < cur->get_children_num(); i++) {
+            new_child = nnf(cur->get_ith_child(i));
+            cur->replace_child(i, new_child);
+        }
+        return cur;
+    }
+    return cur;
+}
+
+Node *distr(Node *one, Node *two) {
+    if (!one || !two) return NULL;
+
+    Node *new_node = new Node("&");
+    if (!one->get_value().compare("&")) {
+        for (int i = 0; i < one->get_children_num(); i++) {
+            new_node->add_child(distr(one->get_ith_child(i), two));
+        }
+    }
+    else if (!two->get_value().compare("&")) {
+        for (int i = 0; i < two->get_children_num(); i++) {
+            new_node->add_child(distr(one, two->get_ith_child(i)));
+        }
+    }
+    else {
+        new_node->set_value("|");
+        new_node->add_child(one);
+        new_node->add_child(two);
+    }
+    return new_node;
+}
+
+
+Node *cnf(Node *cur) {
+    if (!cur) return NULL;
+
+    if (!cur->get_value().compare("|")) {
+        return cnf_and_distr(cur->get_children());
+    }
+    else if (!cur->get_value().compare("&")) {
+        for (int i = 0; i < cur->get_children_num(); i++) {
+            cur->replace_child(i, cnf(cur->get_ith_child(i)));
+        }
+        return cur;
+    }
+    else
+        return cur;
+}
+
+Node *cnf_and_distr(vector<Node*> children) {
+    if (children.size() < 2)
+        return NULL;
+    else if (children.size() == 2) {
+        return distr(cnf(children[0]), cnf(children[1]));
+    }
+    else {
+        vector<Node*>::const_iterator first = children.begin() + 1;
+        vector<Node*>::const_iterator last = children.begin() + children.size();
+        vector<Node*> subchildren(first, last);
+        return distr(cnf(children[0]), cnf_and_distr(subchildren));
+    }
 }
 
 int main(int argc, char** argv) {
@@ -287,6 +380,15 @@ int main(int argc, char** argv) {
     ExpressionTree *new_tree = new ExpressionTree();
     Node *first = new_tree->get_root();
     Node *second = first->get_ith_child(0);
+    cout << first->get_value() << endl;
+    cout << second->get_value() << endl;
+//    for (int j = 0; j < second->get_children_num(); j++) {
+//        cout << second->get_ith_child(j)->get_value() << endl;
+//    }
+    impl_free(new_tree->get_root());
+//    nnf(new_tree->get_root());
+//    cnf(new_tree->get_root());
+    cout << "\n" << endl;
     cout << first->get_value() << endl;
     cout << second->get_value() << endl;
     for (int j = 0; j < second->get_children_num(); j++) {
