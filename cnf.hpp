@@ -30,7 +30,7 @@ class Node {
         void add_child(Node *);
         Node *replace_child(int, Node *);
         Node *negate();
-        int set_secret_children_num();
+        bool set_secret_children_num();
         int construct_tree(int);
 };
 
@@ -40,11 +40,14 @@ class ExpressionTree {
     public:
         ExpressionTree();
         Node *get_root();
+        Node *_impl_free(Node *);
+        Node *_nnf(Node *);
+        Node *_distr(Node *, Node *);
+        Node *_cnf(Node *);
+        Node *_cnf_and_distr(vector<Node*>);
+        void cnf();
+        string infix();
+        string prefix();
 };
 
-Node *impl_free(Node *);
-Node *nnf(Node *);
-Node *distr(Node *, Node *);
-Node *cnf(Node *);
-Node *cnf_and_distr(vector<Node*>);
 #endif
