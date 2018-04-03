@@ -463,8 +463,20 @@ Node *ExpressionTree::_distr(Node *one, Node *two) {
     }
     else {
         new_node->set_value("|");
-        new_node->add_child(one);
-        new_node->add_child(two);
+        if (!one->get_value().compare("|")) {
+            for (int j = 0; j < one->get_children_num(); j++) {
+                new_node->add_child(one->get_ith_child(j));
+            }
+        }
+        else
+            new_node->add_child(one);
+        if (!two->get_value().compare("|")) {
+            for (int j = 0; j < two->get_children_num(); j++) {
+                new_node->add_child(two->get_ith_child(j));
+            }
+        }
+        else
+            new_node->add_child(two);
     }
     return new_node;
 }
@@ -479,12 +491,33 @@ Node *ExpressionTree::_cnf(Node *cur) {
         Node *new_node = _cnf_and_distr(cur->get_children());
         if (cur->get_parent()) {
             free(cur->get_parent()->replace_child(cur->get_index(), new_node));
+            if (!new_node->get_value().compare(new_node->get_parent()->get_value())) {
+                for (int j = 0; j < new_node->get_children_num(); j++) {
+                    if (!j) {
+                        new_node->get_parent()->replace_child(new_node->get_index(), new_node->get_ith_child(j));
+                        continue;
+                    }
+                    new_node->get_parent()->add_child(new_node->get_ith_child(j));
+                }
+            }
         }
         return new_node;
     }
     else if (!cur->get_value().compare("&")) {
+        Node *child;
         for (int i = 0; i < cur->get_children_num(); i++) {
-            cur->replace_child(i, _cnf(cur->get_ith_child(i)));
+            child = _cnf(cur->get_ith_child(i));
+            if (!child->get_value().compare("&")) {
+                for (int j = 0; j < child->get_children_num(); j++) {
+                    if (!j) {
+                        cur->replace_child(i, child->get_ith_child(j));
+                        continue;
+                    }
+                    cur->add_child(child->get_ith_child(j));
+                }
+            }
+            else
+                cur->replace_child(i, child);
         }
     }
     return cur;
@@ -510,14 +543,106 @@ void ExpressionTree::cnf() {
     root = _impl_free(root);
     cout << "nnf" << endl;
     root = _nnf(root);
-//    cout << "cnf" << endl;
-//    root = _cnf(root);
+    cout << "cnf" << endl;
+    root = _cnf(root);
 }
 
 string ExpressionTree::infix() {
-    Node *cur = this->root;
+    if (!root || root->get_value().compare("&"))
+        return "";
+
+    vector<Node*> children = root->get_children();
+    string str;
+    for (vector<Node*>::iterator it = children.begin(); it != children.end(); it++) {
+        if (!(*it)->get_value().compare("|")) {
+            str.append("( ");
+            for (int j = 0; j < (*it)->get_children_num(); j++) {
+                if ((*it)->get_ith_child(j)->get_value().compare("-"))
+                    str.append((*it)->get_ith_child(j)->get_value());
+                else {
+                    str.append((*it)->get_ith_child(j)->get_value());
+                    str.append(" ");
+                    str.append((*it)->get_ith_child(j)->get_ith_child(0)->get_value());
+                }
+                str.append(" | ");
+            }
+            str.pop_back();
+            str.pop_back();
+            str.pop_back();
+            str.append(" )");
+        }
+        else if (!(*it)->get_value().compare("-")) {
+            str.append((*it)->get_value());
+            str.append(" ");
+            str.append((*it)->get_ith_child(0)->get_value());
+        }
+        else
+            str.append((*it)->get_value());
+        str.append(" & ");
+    }
+    str.pop_back();
+    str.pop_back();
+    str.pop_back();
+    return str;
 }
 
+string ExpressionTree::prefix() {
+    if (!root || root->get_value().compare("&"))
+        return "";
+
+    string str;
+    for (int i = 0; i < root->get_children_num(); i ++) {
+        if (i < root->get_children_num()-1)
+            str.append("& ");
+        Node *cur = root->get_ith_child(i);
+        if (!cur->get_value().compare("|")) {
+            for (int j = 0; j < cur->get_children_num(); j++) {
+                if (j < cur->get_children_num()-1)
+                    str.append("| ");
+                if (!cur->get_ith_child(j)->get_value().compare("-")) {
+                    str.append(cur->get_ith_child(j)->get_value());
+                    str.append(" ");
+                    str.append(cur->get_ith_child(j)->get_ith_child(0)->get_value());
+                    str.append(" ");
+                }
+                else{
+                    str.append(cur->get_ith_child(j)->get_value());
+                    str.append(" ");
+                }
+            }
+        }
+        else if (!cur->get_value().compare("-")) {
+            str.append(cur->get_value());
+            str.append(" ");
+            str.append(cur->get_ith_child(0)->get_value());
+            str.append(" ");
+        }
+        else {
+            str.append(cur->get_value());
+            str.append(" ");
+        }
+    }
+    str.pop_back();
+    return str;
+}
+
+/* check the validity of the given normal formula
+ * all clauses should contain pair of negative literals */
+bool ExpressionTree::validity() {
+    vector<Node*> children = root->get_children();
+
+    vector<Node*> pos = {};
+    vector<Node*> neg = {};
+    vector<Node*> more_children;
+    for (vector<Node*>::iterator it = children.begin(); it != children.end(); it++) {
+        more_children = (*it)->get_children();
+        for (vector<Node*>::iterator it2 = more_children.begin(); it2 != more_children.end(); it2++) {
+            if ((*it2)->get_value().compare("-")) {
+                find
+            }
+        }
+    }
+}
 
 int main(int argc, char** argv) {
     if (argc != 2)
@@ -540,4 +665,7 @@ int main(int argc, char** argv) {
         cout << first->get_ith_child(j)->get_value() << endl;
     }
 
+    cout << "\n" << endl;
+    cout << new_tree->infix() << endl;
+    cout << new_tree->prefix() << endl;
 }

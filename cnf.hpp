@@ -48,6 +48,7 @@ class ExpressionTree {
         void cnf();
         string infix();
         string prefix();
+        bool validity();
 };
 
 #endif
