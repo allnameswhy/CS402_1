@@ -30,6 +30,7 @@ class Node {
         void add_child(Node *);
         Node *replace_child(int, Node *);
         Node *negate();
+        Node *remove_child(int);
         bool set_secret_children_num();
         int construct_tree(int);
 };

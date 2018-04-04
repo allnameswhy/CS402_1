@@ -95,11 +95,12 @@ Node *Node::replace_child(int i, Node *new_child) {
 Node *Node::negate() {
     if (!value.compare("-")) { // 'this' is freed and returns the child
         Node *child  = children[0];
-        if (parent)
+        if (parent) {
             free(parent->replace_child(index, child));
-        else
-            free(this);
-        return child;
+            return child;
+        }
+        free(this);
+        return NULL;
     }
     else { // 'this' is still alive, pointing after the negation
         Node *intermediate = new Node("-");
@@ -109,6 +110,13 @@ Node *Node::negate() {
         intermediate->add_child(this);
         return intermediate;
     }
+}
+
+Node* Node::remove_child(int i) {
+    Node *prev = children[i];
+    children.erase(children.begin()+i);
+    children_num--;
+    return prev;
 }
 
 bool Node::set_secret_children_num() {
@@ -129,7 +137,6 @@ ExpressionTree::ExpressionTree() {
 int Node::construct_tree(int i) {
     if (this == NULL) return 0;
     if (i >= param.size()) {
-        cout << "Reached end of the formula " << i << '\n';
         return --i;
     }
 
@@ -383,14 +390,14 @@ Node *ExpressionTree::_impl_free(Node *cur) {
 Node *ExpressionTree::_nnf(Node *cur) {
     if (!cur) return cur;
 
-    cout << "nnf " << cur->get_value()  << endl;
+    //cout << "nnf " << cur->get_value()  << endl;
 
     Node *new_child = cur;
     if (!cur->get_value().compare("-")) {
         if (!cur->get_ith_child(0)->get_value().compare("-")) {
             new_child = _nnf(cur->get_ith_child(0)->get_ith_child(0));
             if (cur->get_parent())
-                free(cur->get_parent()->replace_child(cur->get_index(), new_child));
+                free(cur->get_parent()->replace_child(cur->get_index(), new_child)); //free
         }
         else if (!cur->get_ith_child(0)->get_value().compare("&")) {
             new_child = new Node("|");
@@ -398,7 +405,7 @@ Node *ExpressionTree::_nnf(Node *cur) {
                 new_child->add_child(cur->get_ith_child(0)->get_ith_child(i)->negate());
             new_child = _nnf(new_child);
             if (cur->get_parent())
-                free(cur->get_parent()->replace_child(cur->get_index(), new_child));
+                free(cur->get_parent()->replace_child(cur->get_index(), new_child)); //free
         }
         else if (!cur->get_ith_child(0)->get_value().compare("|")) {
             new_child = new Node("&");
@@ -406,7 +413,7 @@ Node *ExpressionTree::_nnf(Node *cur) {
                 new_child->add_child(cur->get_ith_child(0)->get_ith_child(i)->negate());
             new_child = _nnf(new_child);
             if (cur->get_parent())
-                free(cur->get_parent()->replace_child(cur->get_index(), new_child));
+                free(cur->get_parent()->replace_child(cur->get_index(), new_child)); //free
         }
     }
     else if (is_ops(cur->get_value())) {
@@ -423,7 +430,7 @@ Node *ExpressionTree::_nnf(Node *cur) {
                 new_child->add_child(child);
         }
         if (cur->get_parent())
-            free(cur->get_parent()->replace_child(cur->get_index(), new_child));
+            free(cur->get_parent()->replace_child(cur->get_index(), new_child)); //free
     }
 //    else {
 //        free(new_child);
@@ -485,7 +492,7 @@ Node *ExpressionTree::_distr(Node *one, Node *two) {
 Node *ExpressionTree::_cnf(Node *cur) {
     if (!cur) return NULL;
 
-    cout << "cnf " << cur->get_value() << endl;
+//    //cout << "cnf " << cur->get_value() << endl;
 
     if (!cur->get_value().compare("|")) {
         Node *new_node = _cnf_and_distr(cur->get_children());
@@ -524,7 +531,7 @@ Node *ExpressionTree::_cnf(Node *cur) {
 }
 
 Node *ExpressionTree::_cnf_and_distr(vector<Node*> children) {
-    cout << "distr" << endl;
+//    //cout << "distr" << endl;
     if (children.size() < 2)
         return NULL;
     else if (children.size() == 2) {
@@ -630,18 +637,57 @@ string ExpressionTree::prefix() {
  * all clauses should contain pair of negative literals */
 bool ExpressionTree::validity() {
     vector<Node*> children = root->get_children();
+    vector<Node*> ch_children;
+    vector<Node*>::iterator it, it2;
+    vector<string> pos = {};
+    vector<string> neg = {};
+    vector<string>::iterator comp, already;
+    bool clause = false;
 
-    vector<Node*> pos = {};
-    vector<Node*> neg = {};
-    vector<Node*> more_children;
-    for (vector<Node*>::iterator it = children.begin(); it != children.end(); it++) {
-        more_children = (*it)->get_children();
-        for (vector<Node*>::iterator it2 = more_children.begin(); it2 != more_children.end(); it2++) {
-            if ((*it2)->get_value().compare("-")) {
-                find
+
+
+    for (it = children.begin(); it != children.end(); it++) {
+        if (!(*it)->get_children_num()) // if literal directly under &
+            continue;
+        ch_children = (*it)->get_children();
+        for (it2 = ch_children.begin(); it2 != ch_children.end(); it2++) {
+            if ((*it2)->get_value().compare("-")) { // positive literal
+                comp = find(neg.begin(), neg.end(), (*it2)->get_value());
+                already = find(pos.begin(), pos.end(), (*it2)->get_value());
+                if (already != pos.end()) { // already exists
+                    (*it)->remove_child(it2 - ch_children.begin());
+                }
+                if (comp != neg.end()) { // there is a complimentary pair
+                    clause = true;
+                    root->remove_child(it - children.begin());
+                    break; // break the inner loop for a single clause
+                }
+                else {
+                    pos.push_back((*it2)->get_value());
+                }
+            }
+            else {
+                comp = find(pos.begin(), pos.end(), (*it2)->get_ith_child(0)->get_value());
+                already = find(neg.begin(), neg.end(), (*it2)->get_ith_child(0)->get_value());
+                if (already != neg.end()) {
+                    (*it)->remove_child(it2 - ch_children.begin());
+                }
+                if (comp != pos.end()) {
+                    clause = true;
+                    root->remove_child(it - children.begin());
+                    break;
+                }
+                else
+                    neg.push_back((*it2)->get_ith_child(0)->get_value());
             }
         }
+        if (!clause) {
+            cout << "Not Valid" << endl;
+            return false;
+        }
     }
+    cout << "Valid" << endl;
+    return true;
 }
 
 int main(int argc, char** argv) {
@@ -659,13 +705,14 @@ int main(int argc, char** argv) {
 
     Node *first = new_tree->get_root();
 
-    cout << "\n" << endl;
-    cout << first->get_value() << endl;
-    for (int j = 0; j < first->get_children_num(); j++) {
-        cout << first->get_ith_child(j)->get_value() << endl;
-    }
+//    cout << "\n" << endl;
+//    cout << first->get_value() << endl;
+//    for (int j = 0; j < first->get_children_num(); j++) {
+//        cout << first->get_ith_child(j)->get_value() << endl;
+//    }
 
     cout << "\n" << endl;
-    cout << new_tree->infix() << endl;
-    cout << new_tree->prefix() << endl;
+//    cout << new_tree->infix() << endl;
+//    cout << new_tree->prefix() << endl;
+    new_tree->validity();
 }
