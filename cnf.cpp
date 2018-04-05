@@ -606,13 +606,14 @@ string ExpressionTree::prefix() {
             for (int j = 0; j < cur->get_children_num(); j++) {
                 if (j < cur->get_children_num()-1)
                     str.append("| ");
+
                 if (!cur->get_ith_child(j)->get_value().compare("-")) {
                     str.append(cur->get_ith_child(j)->get_value());
                     str.append(" ");
                     str.append(cur->get_ith_child(j)->get_ith_child(0)->get_value());
                     str.append(" ");
                 }
-                else{
+                else {
                     str.append(cur->get_ith_child(j)->get_value());
                     str.append(" ");
                 }
@@ -636,49 +637,52 @@ string ExpressionTree::prefix() {
 /* check the validity of the given normal formula
  * all clauses should contain pair of negative literals */
 bool ExpressionTree::validity() {
-    vector<Node*> children = root->get_children();
-    vector<Node*> ch_children;
+    Node* child;
+    Node* ch_child;
     vector<Node*>::iterator it, it2;
     vector<string> pos = {};
     vector<string> neg = {};
     vector<string>::iterator comp, already;
     bool clause = false;
 
-
-
-    for (it = children.begin(); it != children.end(); it++) {
-        if (!(*it)->get_children_num()) // if literal directly under &
+    for (int i = 0; i < root->get_children_num(); i++) {
+        child = root->get_ith_child(i);
+        if (!child->get_children_num()) // if literal directly under &
             continue;
-        ch_children = (*it)->get_children();
-        for (it2 = ch_children.begin(); it2 != ch_children.end(); it2++) {
-            if ((*it2)->get_value().compare("-")) { // positive literal
-                comp = find(neg.begin(), neg.end(), (*it2)->get_value());
-                already = find(pos.begin(), pos.end(), (*it2)->get_value());
+        for (int j = 0; j < child->get_children_num(); j++) {
+            ch_child = child->get_ith_child(j);
+            if (ch_child->get_value().compare("-")) { // positive literal
+                comp = find(neg.begin(), neg.end(), ch_child->get_value());
+                already = find(pos.begin(), pos.end(), ch_child->get_value());
                 if (already != pos.end()) { // already exists
-                    (*it)->remove_child(it2 - ch_children.begin());
+                    child->remove_child(j);
+                    j--;
                 }
                 if (comp != neg.end()) { // there is a complimentary pair
                     clause = true;
-                    root->remove_child(it - children.begin());
+                    root->remove_child(i);
+                    i--;
                     break; // break the inner loop for a single clause
                 }
                 else {
-                    pos.push_back((*it2)->get_value());
+                    pos.push_back(ch_child->get_value());
                 }
             }
             else {
-                comp = find(pos.begin(), pos.end(), (*it2)->get_ith_child(0)->get_value());
-                already = find(neg.begin(), neg.end(), (*it2)->get_ith_child(0)->get_value());
+                comp = find(pos.begin(), pos.end(), ch_child->get_ith_child(0)->get_value());
+                already = find(neg.begin(), neg.end(), ch_child->get_ith_child(0)->get_value());
                 if (already != neg.end()) {
-                    (*it)->remove_child(it2 - ch_children.begin());
+                    child->remove_child(j);
+                    j--;
                 }
                 if (comp != pos.end()) {
                     clause = true;
-                    root->remove_child(it - children.begin());
+                    root->remove_child(i);
+                    i--;
                     break;
                 }
                 else
-                    neg.push_back((*it2)->get_ith_child(0)->get_value());
+                    neg.push_back(ch_child->get_ith_child(0)->get_value());
             }
         }
         if (!clause) {
@@ -712,7 +716,7 @@ int main(int argc, char** argv) {
 //    }
 
     cout << "\n" << endl;
-//    cout << new_tree->infix() << endl;
-//    cout << new_tree->prefix() << endl;
+    cout << new_tree->infix() << endl;
+    cout << new_tree->prefix() << endl;
     new_tree->validity();
 }
