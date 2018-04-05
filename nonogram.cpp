@@ -42,7 +42,7 @@ static unsigned powu(unsigned base, unsigned exp) {
   return result;
 }
 
-static vector<string> repeated_permutation(char *list, unsigned perm_len) {
+static vector<string> repeated_combination(char *list, unsigned perm_len) {
   unsigned list_len = strlen(list);
   char *perm = (char *) calloc(perm_len+1, sizeof(char));
   int total_num = powu(list_len, perm_len);
@@ -63,12 +63,12 @@ static vector<string> repeated_permutation(char *list, unsigned perm_len) {
 vector<int> get_block_nums(bool is_row, int line_num) {
     vector<int> block_nums;
     if (is_row) {
-        for (int i = 1; i < 7; i++)
+        for (int i = 1; i < column + 1; i++)
             block_nums.push_back((line_num*column)+i);
     }
     else {
         vector<int> column_nums = {};
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < row; i++)
             block_nums.push_back(line_num+1+(i*row));
     }
     return block_nums;
@@ -76,26 +76,57 @@ vector<int> get_block_nums(bool is_row, int line_num) {
 
 
 string solve_line(bool is_row, int line_num, string line_info) {
-  int blocks_per_line = is_row? column : row;
-  vector<int> block_nums = get_block_nums(is_row, line_num);
-  vector<int> line = split(line_info, ' ');
-  string str = "";
+    vector<int> block_nums = get_block_nums(is_row, line_num);
+    int blocks_per_line = block_nums.size();
+    vector<int> line = split(line_info, ' ');
+    string str = "";
 
   // get the sum of the colored block + in-betweens
-  int sum = 0;
-  for (auto it = line.begin(); it != line.end(); it++) {
-    sum += (*it);
-    sum += (it != (line.end() - 1));
-  }
-  if (blocks_per_line == sum) {
-   for (int i = 0; i < line.size(); i++) {
-      for (int j = 0; j < line[i];  j++) {
-        if (i < line.size() - 1)
-          str.append("& ");
-        str.append(to_string(block_nums[i + j]));
-     }
-   }
-  }
+    int sum = 0;
+    for (auto it = line.begin(); it != line.end(); it++) {
+        sum += (*it);
+        sum += (it != (line.end() - 1));
+    }
+
+
+    int cur = 0;
+    // if there is no extra blanks
+    if (blocks_per_line == sum) {
+        for (int i = 0; i < line.size(); i++) {
+            for (int j = 0; j < line[i];  j++) {
+                if (cur < blocks_per_line - 1)
+                    str.append("& ");
+                str.append(to_string(block_nums[cur]));
+                str.append(" ");
+                cur++;
+            }
+            if (i < line.size() - 1) {
+                if (cur < blocks_per_line - 1)
+                    str.append("& ");
+                str.append("- ");
+                str.append(to_string(block_nums[cur]));
+                str.append(" ");
+                cur++;
+            }
+        }
+        if (cur == blocks_per_line)
+            cout << "succeeded without empty space" << endl;
+    }
+    else {
+        string blank_cand = "";
+        for (int i = 0; i <= line.size(); i++) {
+            cand.append(to_string(i));
+        }
+        vector<string> blank_blocks = repeated_combination(cand, line.size() + 1);
+        for (auto it = blank_blocks.begin(); it != blank_blocks.end(); it++) {
+            while (atoi((*it).front()) <= cur) {
+
+            }
+            for (int i = 0; i < line.size(); i ++) {
+                if ()
+            }
+        }
+    }
 }
 
 
