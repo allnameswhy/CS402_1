@@ -131,7 +131,8 @@ ExpressionTree::ExpressionTree() {
     if (param.size() > 0) root = new Node(param[0]);
     else root = NULL;
 
-    cout << root->construct_tree(1) << endl;
+    // cout << root->construct_tree(1) << endl;
+    root->construct_tree(1);
 }
 
 int Node::construct_tree(int i) {
@@ -546,11 +547,11 @@ Node *ExpressionTree::_cnf_and_distr(vector<Node*> children) {
 }
 
 void ExpressionTree::cnf() {
-    cout << "impl" << endl;
+    // cout << "impl" << endl;
     root = _impl_free(root);
-    cout << "nnf" << endl;
+    // cout << "nnf" << endl;
     root = _nnf(root);
-    cout << "cnf" << endl;
+    // cout << "cnf" << endl;
     root = _cnf(root);
 }
 
