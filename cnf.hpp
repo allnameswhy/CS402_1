@@ -13,6 +13,7 @@ class Node {
     private:
         Node* parent;
         vector<Node*> children;
+        vector<int> children_int;
         int index;
         int children_num;
         int secret_children_num;
@@ -33,6 +34,7 @@ class Node {
         Node *remove_child(int);
         bool set_secret_children_num();
         int construct_tree(int);
+        int numbering_literals();
 };
 
 class ExpressionTree {
@@ -50,6 +52,7 @@ class ExpressionTree {
         string infix();
         string prefix();
         bool validity();
+        void miniSAT(string);
 };
 
 #endif

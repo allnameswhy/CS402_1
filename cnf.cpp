@@ -16,6 +16,7 @@ using namespace std;
 
 static vector<string> ops = {"&", "|", "<", ">", "="};       /* list of operations */
 static vector<string> param = {}; /* contains command args */
+static vector<string> literals = {}; /*for minisat*/
 
 static bool is_ops(const string cand) {                            /* is some character operator */
     vector<string>::iterator result = find(ops.begin(), ops.end(), cand);
@@ -635,6 +636,44 @@ string ExpressionTree::prefix() {
     return str;
 }
 
+int Node::numbering_literals() {
+  int new_value = 0;
+  if (!is_ops(value) && value.compare("-")) {
+    vector<string>::iterator it = find(literals.begin(), literals.end(), value);
+    if (it == literals.end()) {
+      literals.push_back(value);
+      new_value = literals.size();
+    }
+    else {
+      new_value = it - literals.begin() + 1;
+    }
+  }
+  for (int i = 0; i < children_num; i++) {
+    if (children[i]->get_value().compare("-")) {
+      int new_child = children[i]->numbering_literals();
+      cout << new_child << " ";
+      if (new_child) {
+        children_int.push_back(new_child);
+      }
+    }
+    else {
+      int new_child = children[i]->get_ith_child(0)->numbering_literals();
+      cout << "-" << new_child << " ";
+      if (new_child)
+        children_int.push_back(-1 * new_child);
+    }
+    cout << 0 << endl;
+  }
+  sort(children_int.begin(), children_int.end());
+  return new_value;
+}
+
+void ExpressionTree::miniSAT(string comment) {
+  cout << "c " << comment << endl;
+  cout << "p cnf " << literals.size() << " " << root->get_children_num() << endl;
+  root->numbering_literals();
+}
+
 /* check the validity of the given normal formula
  * all clauses should contain pair of negative literals */
 bool ExpressionTree::validity() {
@@ -720,4 +759,5 @@ int main(int argc, char** argv) {
     cout << new_tree->infix() << endl;
     cout << new_tree->prefix() << endl;
     new_tree->validity();
+    new_tree->miniSAT("nooo");
 }
